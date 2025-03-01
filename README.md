@@ -3,230 +3,199 @@
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)
 ![MongoDB Version](https://img.shields.io/badge/MongoDB-6.0%2B-brightgreen)
-![Express.js Version](https://img.shields.io/badge/Express-4.x-blue)
+![Redis Version](https://img.shields.io/badge/Redis-6.x%2B-brightgreen)
 
-A robust, production-ready backend API for managing sales orders, customers, and inventory with real-time notifications and role-based access control.
+Enterprise-grade backend system for managing sales operations with real-time capabilities and robust access control.
 
 ---
 
 ## Table of Contents
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [API Documentation](#api-documentation)
-- [Real-Time Features](#real-time-features)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Environment Variables](#environment-variables)
-- [Security](#security)
+
+- [Key Features](#key-features)
+- [Architecture](#architecture)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Configuration (`.env`)](#configuration-env)
+  - [Development](#development)
+  - [Core Endpoints](#core-endpoints)
+- [Real-Time Integration](#real-time-integration)
+  - [WebSocket Connection](#websocket-connection)
+  - [Event Payload Example](#event-payload-example)
+- [Monitoring](#monitoring)
 - [Contributing](#contributing)
 - [License](#license)
 
 ---
 
-## Features
+## Key Features
 
-- **Authentication & Authorization**:
-  - JWT-based authentication
-  - Role-Based Access Control (RBAC) using CASL
-  - Secure password hashing with bcrypt
+- **Zero-Downtime Architecture**
+  - Horizontal scaling support
+  - Redis-backed rate limiting
+  - Connection pooling (MongoDB/Redis)
 
-- **Core Functionality**:
-  - SKU (Stock Keeping Unit) management
-  - Customer management
-  - Order creation and tracking
-  - Data isolation between users
+- **Real-Time Operations**
+  - WebSocket notifications for admin dashboards
+  - Event-driven architecture
+  - Socket.IO with Redis adapter
 
-- **Real-Time Capabilities**:
-  - WebSocket notifications for admins
-  - Instant order placement alerts
+- **Enterprise Security**
+  - JWT with RSA256 encryption
+  - Role-Based Access Control (RBAC)
+  - Helmet security headers
+  - Request validation middleware
 
-- **Automation**:
-  - Hourly order summaries via cron jobs
-  - Automated order ID generation
+- **Observability**
+  - Winston structured logging
+  - Prometheus metrics endpoint
+  - Health check endpoints
+  - Automated error tracking
 
-- **Production-Ready**:
-  - Rate limiting
-  - Request validation
-  - Comprehensive error handling
-  - Logging and monitoring
-
----
-
-## Tech Stack
-
-- **Runtime**: Node.js 18.x
-- **Framework**: Express.js 4.x
-- **Database**: MongoDB Atlas
-- **Authentication**: JWT
-- **Authorization**: CASL
-- **Real-Time**: Socket.IO
-- **Cron Jobs**: node-cron
-- **Validation**: Joi
-- **Logging**: Winston
+- **Automation**
+  - Atomic order ID generation
+  - Hourly cron jobs with locking
+  - Database indexing strategies
+  - Graceful shutdown handling
 
 ---
 
-## Installation
+## Architecture
+
+![System Architecture](docs/architecture-diagram.png)
+
+**Tech Stack:**
+
+- **Runtime:** Node.js 18 LTS
+- **Framework:** Express 4.x
+- **Database:** MongoDB Atlas (Sharded Cluster)
+- **Cache:** Redis 6.x
+- **Auth:** JWT, CASL
+- **Realtime:** Socket.IO
+- **Monitoring:** Prometheus, Grafana
+- **CI/CD:** GitHub Actions
+
+---
+
+## Getting Started
 
 ### Prerequisites
-- Node.js 18.x
-- MongoDB Atlas cluster
-- Redis (for rate limiting, optional)
 
-### Steps
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/sudouserx/sales-order-app.git
-   cd sales-order-app
-   ```
+- **Node.js:** v18.x or higher
+- **Database:** MongoDB Atlas cluster
+- **Cache:** Redis instance
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+### Installation
 
-3. Set up environment variables (see [Configuration](#configuration)).
+Clone the repository and install dependencies:
 
-4. Start the server:
-   ```bash
-   npm start
-   ```
+```bash
+git clone https://github.com/sudouserx/sales-order-app.git
+cd sales-order-app
+npm ci --production=false
+cp .env.example .env
+```
 
----
+### Configuration (`.env`)
 
-## Configuration
+Customize your environment variables:
 
-Create a `.env` file in the root directory with the following variables:
-
-```env
-# Required
-JWT_SECRET=your_jwt_secret_here
-MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/sales-order
+```ini
+# Core Configuration
+JWT_SECRET="your_rsa_private_key_here"
+MONGODB_URI="mongodb+srv://<user>:<pass>@cluster.mongodb.net/sales-order"
+REDIS_URI="redis://:password@host:port"
 PORT=3000
 
-# Optional
-REDIS_URI=redis://localhost:6379
-LOG_LEVEL=info
-API_RATE_LIMIT=1000/1h
+# Observability
+LOG_LEVEL="info"
+METRICS_PORT=9100
+
+# Rate Limiting
+API_RATE_LIMIT="1000/1h"
 ```
+
+### Development
+
+Start your development server with:
+
+```bash
+npm run dev
+```
+
+### Core Endpoints
+
+| **Method** | **Endpoint**                 | **Auth**   | **Validation**           |
+|------------|------------------------------|------------|--------------------------|
+| `POST`   | `/api/orders`                | JWT + RBAC | Order Schema             |
+| `GET`    | `/api/orders`                | Admin      | Pagination               |
+| `POST`   | `/api/skus`                  | User       | SKU Schema               |
+| `GET`    | `/api/reports/summaries`     | Admin      | Date Range Filtering     |
 
 ---
 
-## API Documentation
+## Real-Time Integration
 
-Explore the API using the interactive Swagger UI:
-```http
-GET /api-docs
+### WebSocket Connection
+
+Establish a secure WebSocket connection:
+
+```javascript
+const socket = io('https://api.yourdomain.com', {
+  query: { token: 'ADMIN_JWT_TOKEN' },
+  transports: ['websocket']
+});
+
+socket.on('new_order', (payload) => {
+  console.log('New Order:', payload);
+});
 ```
 
-### Key Endpoints
+### Event Payload Example
 
-| Method | Endpoint                         | Description                    |
-|--------|----------------------------------|--------------------------------|
-| POST   | `/api/auth/signup`               | User registration              |
-| POST   | `/api/auth/login`                | User login (JWT token)         |
-| POST   | `/api/skus`                      | Create new SKU                 |
-| POST   | `/api/customers`                 | Create new customer            |
-| POST   | `/api/orders`                    | Create new order               |
-| GET    | `/api/orders`                    | Fetch all orders (Admin only)  |
-| GET    | `/api/reports/hourly-summaries`  | Hourly order summary           |
-
----
-
-## Real-Time Features
-
-Admins receive real-time notifications via WebSocket when new orders are placed.
-
-### Example Notification
 ```json
 {
-  "message": "New order placed",
-  "order_id": "ORD-00001",
-  "user": "salesman1",
-  "customer": "John Doe",
-  "sku": "Laptop",
-  "total_amount": 118000,
-  "timestamp": "2025-02-28T14:05:00Z"
+  "event_id": "evt_01HXYZ987ABC",
+  "type": "order.created",
+  "data": {
+    "order_id": "ORD-00001",
+    "total_amount": 118000,
+    "sales_rep": "john.doe@corp.com"
+  },
+  "metadata": {
+    "timestamp": "2025-03-01T12:34:56Z",
+    "source": "api-server-01"
+  }
 }
 ```
 
 ---
 
-## Testing
+## Monitoring
 
-Run the test suite:
-```bash
-npm test
+### Metrics Endpoints
+
+Monitor the health and performance of the service:
+
+```http
+GET /health       # Service health status
 ```
-
----
-
-## Deployment
-
-### Docker
-1. Build the Docker image:
-   ```bash
-   docker build -t sales-order-api .
-   ```
-
-2. Run the container:
-   ```bash
-   docker run -p 3000:3000 --env-file .env sales-order-api
-   ```
-
-### Kubernetes
-Deploy using the provided Kubernetes manifests:
-```bash
-kubectl apply -f k8s/
-```
-
----
-
-## Environment Variables
-
-| Variable         | Required | Default     | Description                           |
-|------------------|----------|-------------|---------------------------------------|
-| `JWT_SECRET`     | Yes      | -           | Secret for JWT signing                |
-| `MONGODB_URI`    | Yes      | -           | MongoDB connection string             |
-| `PORT`           | No       | 3000        | Server port                          |
-| `REDIS_URI`      | No       | -           | Redis connection for rate limiting    |
-| `LOG_LEVEL`      | No       | info        | Logging level (debug, info, warn, error) |
-
----
-
-## Security
-
-### Best Practices
-- JWT tokens with expiration
-- Role-based access control
-- Input validation for all endpoints
-- Rate limiting to prevent abuse
-- Secure password hashing
-- HTTPS enforced in production
 
 ---
 
 ## Contributing
 
-We welcome contributions! Please follow these steps:
+Contributions are welcome! To contribute:
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes (`git commit -m 'Add your feature'`)
-4. Push to the branch (`git push origin feature/your-feature`)
-5. Open a Pull Request
+1. **Fork the repository**
+2. **Create a feature branch:** `git checkout -b feat/your-feature`
+3. **Submit a pull request** with:
+   - Test coverage report
+   - API documentation updates
+   - Migration scripts (if needed)
 
 ---
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
-
----
-
-## Support
-
-For issues or questions, please open an issue on GitHub or contact:
-- **Email**: ebrahimaliyou@gmail.com
+This project is licensed under the [MIT License](LICENSE).  
